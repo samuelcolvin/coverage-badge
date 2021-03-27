@@ -35,27 +35,31 @@ async function route(event: FetchEvent) {
   return error('Page Not Found', 404)
 }
 
+interface Status {
+  description: string,
+  context: string
+}
+
 async function badge(searchParams: URLSearchParams) {
   const a = {
     owner: searchParams.get('owner'),
     repo: searchParams.get('repo'),
-    branch: searchParams.get('branch'),
-    context: searchParams.get('context'),
+    branch: searchParams.get('branch') || 'master',
+    context: searchParams.get('context') || 'smokeshow',
   }
-  const missing = Object.values(a).filter(v => !v)
-  if (missing.length) {
-    const keys = Object.keys(a).join(', ')
-    return error(`The following GET arguments must all be set: ${keys}`, 400)
+
+  if (Object.values(a).some(v => v == null)) {
+    return error('"owner" and "repo" GET arguments are required', 400)
   }
   const gh_url = `https://api.github.com/repos/${a.owner}/${a.repo}/commits/${a.branch}/status`
   const r = await fetch(gh_url, {headers: {'user-agent': 'https://github.com/samuelcolvin/coverage-badge'}})
   if (r.status != 200) {
     const body = await r.text()
-    return error(`Unexpected response from "${gh_url}" ${r.status}: ${body}`, 502)
+    return error(`Unexpected response from "${gh_url}" ${r.status} body:\n${body}`, 502)
   }
   const data = await r.json()
 
-  const status = data.statuses.find((s: Record<string, string>) => s.context == a.context)
+  const status = (data.statuses as Status[]).find(s => s.context == a.context)
   if (!status) {
     return error(`Status with context "${a.context}" not found`, 400)
   }
@@ -64,7 +68,7 @@ async function badge(searchParams: URLSearchParams) {
   if (!m) {
     return error(`Coverage not found in status description: "${status.description}"`, 400)
   }
-  const coverage = parseFloat(m)
+  const coverage = parseFloat(m[1])
 
   const svg = badge_svg.replaceAll('{cov}', coverage.toFixed(0) + '%')
   return new Response(svg, {headers: {'content-type': 'image/svg+xml'}})
