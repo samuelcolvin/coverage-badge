@@ -73,7 +73,12 @@ async function badge(owner: string, repo: string, searchParams: URLSearchParams)
   }
 
   const svg = badge_svg.replaceAll('{cov}', coverage).replaceAll('{message}', message)
-  return new Response(svg, {headers: {'content-type': 'image/svg+xml'}})
+  const headers = {
+    'content-type': 'image/svg+xml',
+    'cache-control': 'private, no-store',
+    'expires': new Date().toUTCString(),
+  }
+  return new Response(svg, {headers})
 }
 
 const error = (msg: string, status: number) => new Response(msg, {status})
