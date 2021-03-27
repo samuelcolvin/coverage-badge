@@ -42,14 +42,9 @@ async function route(event: FetchEvent) {
   return error('Page Not Found', 404)
 }
 
-interface Status {
-  description: string
-  context: string
-}
-
 async function badge(owner: string, repo: string, searchParams: URLSearchParams) {
   const branch = searchParams.get('branch') || 'master'
-  const context = searchParams.get('context') || 'smokeshow'
+  const match = RegExp(searchParams.get('match') || '^coverage', 'i')
 
   const gh_url = `https://api.github.com/repos/${owner}/${repo}/commits/${branch}/status`
   const r = await fetch(gh_url, {headers: {'user-agent': 'https://github.com/samuelcolvin/coverage-badge'}})
@@ -57,19 +52,27 @@ async function badge(owner: string, repo: string, searchParams: URLSearchParams)
     const body = await r.text()
     return error(`Unexpected response from "${gh_url}" ${r.status} body:\n${body}`, 502)
   }
-  const data = await r.json()
+  const data: {statuses: {description: string}[]} = await r.json()
 
   let coverage = '??%'
+  let message
 
-  const status = (data.statuses as Status[]).find(s => s.context == context)
+  const status = data.statuses.find(s => s.description.match(match))
   if (status) {
     const m = status.description.match(/([\d.]+)%/)
     if (m) {
-      coverage = parseFloat(m[1]).toFixed(0) + '%'
+      const cov_float = parseFloat(m[1])
+      coverage = cov_float.toFixed(0) + '%'
+      message = `Found coverage percentage ${cov_float} in status:\n"${JSON.stringify(status, null, 2)}"`
+    } else {
+      message = `coverage percentage not found in status:\n"${JSON.stringify(status, null, 2)}"`
     }
+  } else {
+    const d = JSON.stringify(data.statuses.map(s => s.description))
+    message = `No status found which matched regex ${match}, status descriptions: ${d}`
   }
 
-  const svg = badge_svg.replaceAll('{cov}', coverage)
+  const svg = badge_svg.replaceAll('{cov}', coverage).replaceAll('{message}', message)
   return new Response(svg, {headers: {'content-type': 'image/svg+xml'}})
 }
 
