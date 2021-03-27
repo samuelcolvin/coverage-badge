@@ -6,7 +6,7 @@ Generate a coverage badge from a github status.
 
 _(This is the actual coverage badge from [pydantic](https://github.com/samuelcolvin/pydantic))_
 
-## Usage
+## Badge Usage
 
 ```
 https://coverage-badge.samuelcolvin.workers.dev/samuelcolvin/pydantic.svg
@@ -23,3 +23,12 @@ Once the status has been found, the coverage figure is extracted from its `descr
 SVG image returned.
 
 A summary of how the SVG coverage was found can be seen by found in a comment at the end of the SVG file.
+
+## Redirect Usage
+
+You can also use this service as the link for badges as shown above, the following endpoint will
+redirect to the `target_url` of the status used to generate the equivilant badge:
+
+```
+https://coverage-badge.samuelcolvin.workers.dev/redirct/samuelcolvin
+```
