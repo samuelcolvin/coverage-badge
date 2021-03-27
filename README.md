@@ -2,15 +2,18 @@
 
 Generate a coverage badge from a github status.
 
+[![Coverage](https://coverage-badge.samuelcolvin.workers.dev/samuelcolvin/pydantic.svg)](https://github.com/samuelcolvin/coverage-badge)
+
+_(This is the actual coverage badge from [pydantic](https://github.com/samuelcolvin/pydantic))_
+
 ## Usage
 
 ```
-https://coverage-badge.samuelcolvin.workers.dev/badge.svg?owner=samuelcolvin&repo=smokeshow
+https://coverage-badge.samuelcolvin.workers.dev/samuelcolvin/pydantic.svg
 ```
 
-The following get arguments are used to find the status to extract coverage from:
-* `owner` - the owner of the github repo
-* `repo` - the github repo name
+The `owner` and `repo` name are taken from the URL path. In additional, the following `GET` arguments 
+are used to find the status to extract coverage from:
 * `branch` - defaults to `master`, the git ref to lookup
 * `context` - defaults to `smokeshow`, the `context` of the status to look for
 

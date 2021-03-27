@@ -6,8 +6,8 @@
   "scripts": {
     "build": "webpack",
     "dev": "NODE_ENV=development yarn build",
-    "format": "prettier --write 'src/**/*.{js,ts,css,scss,html}'",
-    "lint": "eslint --max-warnings=0 src && prettier --check 'src/**/*.{js,ts,css,scss,html}'"
+    "format": "prettier --write 'src/**/*.ts'",
+    "lint": "eslint --max-warnings=0 src && prettier --check 'src/**/*.ts'"
   },
   "author": "Samuel Colvin",
   "license": "MIT",
