@@ -106,22 +106,42 @@ interface StatusInfo {
   match: RegExp
 }
 
+interface Commit {
+  sha: string
+  url: string
+}
 
 async function status_info(owner: string, repo: string, searchParams: URLSearchParams): Promise<StatusInfo> {
-  const branch = searchParams.get('branch') || 'master'
   const match = RegExp(searchParams.get('match') || '^coverage', 'i')
 
-  const gh_url = `https://api.github.com/repos/${owner}/${repo}/commits/${branch}/status`
-  const r = await fetch(gh_url, {headers: {'user-agent': 'https://github.com/samuelcolvin/coverage-badge'}})
-  if (r.status != 200) {
-    const body = await r.text()
-    throw new HttpError(502,`Unexpected response from "${gh_url}" ${r.status} body:\n${body}`)
-  }
-  const data: {statuses: Status[]} = await r.json()
+  const commits: Commit[] = await get(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=3`)
 
+  for (const commit of commits) {
+    const data: {statuses: Status[]} = await get(`${commit.url}/status`)
+    if (data.statuses.length > 0) {
+      console.log(`commit ${commit.sha} has ${data.statuses.length} statuses, using commit`)
+      return {
+        status: data.statuses.find(s => s.description.match(match)),
+        statuses: data.statuses,
+        match
+      }
+    } else {
+      console.log(`commit ${commit.sha} has no statuses, continuing`)
+    }
+  }
+  // no commit found with statuses
   return {
-    status: data.statuses.find(s => s.description.match(match)),
-    statuses: data.statuses,
+    status: undefined,
+    statuses: [],
     match
   }
+}
+
+async function get(url: string): Promise<any> {
+  const r = await fetch(url, {headers: {'user-agent': 'https://github.com/samuelcolvin/coverage-badge'}})
+  if (r.status != 200) {
+    const body = await r.text()
+    throw new HttpError(502,`Unexpected response from "${url}" ${r.status} body:\n${body}`)
+  }
+  return await r.json()
 }
