@@ -1,6 +1,6 @@
 import {captureException} from './sentry'
 import {HttpError} from './utils'
-import badge_svg from '!raw-loader!./badge.svg'
+import badge_svg from './badge'
 
 addEventListener('fetch', e => e.respondWith(handle(e)))
 
@@ -114,7 +114,13 @@ interface Commit {
 async function status_info(owner: string, repo: string, searchParams: URLSearchParams): Promise<StatusInfo> {
   const match = RegExp(searchParams.get('match') || '^coverage', 'i')
 
-  const commits: Commit[] = await get(`https://api.github.com/repos/${owner}/${repo}/commits?per_page=3`)
+  let url = `https://api.github.com/repos/${owner}/${repo}/commits?per_page=3`
+  const branch = searchParams.get('branch')
+  if (branch) {
+    url += `&sha=${branch}`
+  }
+
+  const commits: Commit[] = await get(url)
 
   for (const commit of commits) {
     const data: {statuses: Status[]} = await get(`${commit.url}/status`)

@@ -1,5 +1,7 @@
+// language=xml
+export default `
 <svg xmlns="http://www.w3.org/2000/svg" width="110" height="20">
-  <title>covverage: {cov}</title>
+  <title>coverage: {cov}</title>
   <defs>
     <linearGradient id="workflow-fill" x1="50%" y1="0%" x2="50%" y2="100%">
       <stop stop-color="#444D56" offset="0%"/>
@@ -35,3 +37,4 @@
   </g>
 </svg>
 <!-- message: {message} -->
+`
