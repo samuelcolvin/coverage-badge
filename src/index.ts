@@ -114,7 +114,7 @@ interface Commit {
 async function status_info(owner: string, repo: string, searchParams: URLSearchParams): Promise<StatusInfo> {
   const match = RegExp(searchParams.get('match') || '^coverage', 'i')
 
-  let url = `https://api.github.com/repos/${owner}/${repo}/commits?per_page=3`
+  let url = `https://api.github.com/repos/${owner}/${repo}/commits?per_page=5`
   const branch = searchParams.get('branch')
   if (branch) {
     url += `&sha=${branch}`
@@ -122,17 +122,19 @@ async function status_info(owner: string, repo: string, searchParams: URLSearchP
 
   const commits: Commit[] = await get(url)
 
+  let i = 0;
   for (const commit of commits) {
+    i += 1
     const data: {statuses: Status[]} = await get(`${commit.url}/status`)
     if (data.statuses.length > 0) {
-      console.log(`commit ${commit.sha} has ${data.statuses.length} statuses, using commit`)
+      console.log(`${i} commit ${commit.sha} has ${data.statuses.length} statuses, using commit`)
       return {
         status: data.statuses.find(s => s.description.match(match)),
         statuses: data.statuses,
         match
       }
     } else {
-      console.log(`commit ${commit.sha} has no statuses, continuing`)
+      console.log(`${i} commit ${commit.sha} has no statuses, continuing`)
     }
   }
   // no commit found with statuses
