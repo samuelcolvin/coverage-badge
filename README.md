@@ -29,5 +29,5 @@ You can also use this service as the link for badges as shown above, the followi
 redirect to the `target_url` of the status used to generate the equivalent badge:
 
 ```
-https://coverage-badge.samuelcolvin.workers.dev/redirct/pydantic/pydantic
+https://coverage-badge.samuelcolvin.workers.dev/redirect/pydantic/pydantic
 ```
