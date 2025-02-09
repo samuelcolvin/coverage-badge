@@ -2,7 +2,7 @@
 
 Generate a coverage badge from a GitHub status.
 
-[![Coverage](https://coverage-badge.samuelcolvin.workers.dev/pydantic/pydantic.svg)](https://coverage-badge.samuelcolvin.workers.dev/redirct/pydantic/pydantic)
+[![Coverage](https://coverage-badge.samuelcolvin.workers.dev/pydantic/pydantic.svg)](https://coverage-badge.samuelcolvin.workers.dev/redirect/pydantic/pydantic)
 
 _(This is the actual coverage badge from [pydantic](https://github.com/pydantic/pydantic))_
 
