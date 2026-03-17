@@ -3,6 +3,7 @@ account_id = "d6252a570c309c113744c9e11317e271"
 workers_dev = true
 compatibility_date = "2024-09-23"
 main = "./src/index.ts"
+placement = { mode = "smart" }
 
 [[kv_namespaces]]
 binding = "COVERAGE_CACHE"

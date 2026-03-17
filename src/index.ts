@@ -61,7 +61,7 @@ async function route(request: Request, env: Env) {
 }
 
 async function badge(owner: string, repo: string, searchParams: URLSearchParams, env: Env): Promise<Response> {
-  const {status, statuses, match} = await status_info(owner, repo, searchParams, env)
+  const {status, statuses, matchParam} = await status_info(owner, repo, searchParams, env)
 
   let coverage = '??%'
   let message
@@ -76,7 +76,7 @@ async function badge(owner: string, repo: string, searchParams: URLSearchParams,
     }
   } else {
     const d = JSON.stringify(statuses.map(s => s.description))
-    message = `No status found which matched regex ${match}, status descriptions: ${d}`
+    message = `No status found which matched regex ${matchParam}, status descriptions: ${d}`
   }
 
   const svg = badge_svg.replaceAll('{cov}', coverage).replaceAll('{message}', message)

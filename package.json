@@ -8,7 +8,8 @@
     "deploy": "wrangler deploy",
     "build": "wrangler deploy --dry-run --outdir=dist",
     "typegen": "wrangler types --strict-vars false --include-runtime false",
-    "format": "prettier --write 'src/**/*.ts'"
+    "format": "prettier --write 'src/**/*.ts'",
+    "typecheck": "tsc --noEmit"
   },
   "author": "Samuel Colvin",
   "license": "MIT",
