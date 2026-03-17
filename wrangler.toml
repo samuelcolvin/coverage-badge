@@ -4,5 +4,10 @@ workers_dev = true
 compatibility_date = "2024-09-23"
 main = "./src/index.ts"
 
+[[kv_namespaces]]
+binding = "COVERAGE_CACHE"
+id = "72ab034048d74a659a9fe51ba10378dc"
+preview_id = "f774eb17e121464cb5989ef62fad9060"
+
 [vars]
 DEBUG = "FALSE"

@@ -5,6 +5,7 @@ import badge_svg from './badge'
 export interface Env {
   GITHUB_TOKEN: string
   SENTRY_DSN: string
+  COVERAGE_CACHE: KVNamespace
   DEBUG?: string
 }
 
@@ -88,11 +89,11 @@ async function badge(owner: string, repo: string, searchParams: URLSearchParams,
 }
 
 async function redirect(owner: string, repo: string, searchParams: URLSearchParams, env: Env): Promise<Response> {
-  const {status, statuses, match} = await status_info(owner, repo, searchParams, env)
+  const { status, statuses, matchParam } = await status_info(owner, repo, searchParams, env)
 
   if (!status) {
     const d = JSON.stringify(statuses.map(s => s.description))
-    throw new HttpError(400, `No status found which matched regex ${match}, status descriptions: ${d}`)
+    throw new HttpError(400, `No status found which matched regex ${matchParam}, status descriptions: ${d}`)
   }
 
   return Response.redirect(status.target_url, 307)
@@ -104,9 +105,9 @@ interface Status {
 }
 
 interface StatusInfo {
-  status: Status | undefined
+  status?: Status
   statuses: Status[]
-  match: RegExp
+  matchParam: string
 }
 
 interface Commit {
@@ -115,10 +116,17 @@ interface Commit {
 }
 
 async function status_info(owner: string, repo: string, searchParams: URLSearchParams, env: Env): Promise<StatusInfo> {
-  const match = RegExp(searchParams.get('match') || '^coverage', 'i')
+  const matchParam = searchParams.get('match') || '^coverage'
+  const branch = searchParams.get('branch') || ''
+
+  const cacheKey = `${owner}/${repo}/${branch}/${matchParam}`
+  const cached = await env.COVERAGE_CACHE.get(cacheKey, 'json') as StatusInfo | null
+  if (cached) {
+    console.log(`cache hit for ${cacheKey}`)
+    return cached
+  }
 
   const newSearchParams = new URLSearchParams({per_page: '5'})
-  const branch = searchParams.get('branch')
   if (branch) {
     newSearchParams.set('sha', branch)
   }
@@ -132,19 +140,21 @@ async function status_info(owner: string, repo: string, searchParams: URLSearchP
     const data: {statuses: Status[]} = await get(`${commit.url}/status`, env)
     if (data.statuses.length > 0) {
       console.log(`${i} commit ${commit.sha} has ${data.statuses.length} statuses, using commit`)
-      return {
+      const match = RegExp(matchParam, 'i')
+      const result: StatusInfo = {
         status: data.statuses.find(s => s.description.match(match)),
         statuses: data.statuses,
-        match
+        matchParam
       }
+      await env.COVERAGE_CACHE.put(cacheKey, JSON.stringify(result), {expirationTtl: 300})
+      return result
     } else {
       console.log(`${i} commit ${commit.sha} has no statuses, continuing`)
     }
   }
   return {
-    status: undefined,
     statuses: [],
-    match
+    matchParam
   }
 }
 
