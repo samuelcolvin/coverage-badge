@@ -1,16 +1,13 @@
-declare const SENTRY_DSN: string
+import type {Env} from './index'
 
-declare const DEBUG: string | undefined
-const debug = typeof DEBUG !== 'undefined' && DEBUG === 'TRUE'
-
-export function captureMessage(event: FetchEvent, message: string, {level = 'info', extra = {}} = {}): void {
-  event.waitUntil(_capture(event.request, {message, level, extra}))
+export function captureMessage(request: Request, ctx: ExecutionContext, env: Env, message: string, {level = 'info', extra = {}} = {}): void {
+  ctx.waitUntil(_capture(request, env, {message, level, extra}))
 }
 
-export function captureException(event: FetchEvent, exc: Error, {level = 'error', extra = {}} = {}): void {
+export function captureException(request: Request, ctx: ExecutionContext, env: Env, exc: Error, {level = 'error', extra = {}} = {}): void {
   const message = exc.toString() || exc.message || 'Unknown error'
-  event.waitUntil(
-    _capture(event.request, {
+  ctx.waitUntil(
+    _capture(request, env, {
       exception: {
         mechanism: {handled: true, type: 'generic'},
         values: [
@@ -52,7 +49,8 @@ interface SentryData {
   extra: Record<string, any>
 }
 
-async function _capture(request: Request, data: Partial<SentryData>): Promise<Response> {
+async function _capture(request: Request, env: Env, data: Partial<SentryData>): Promise<Response> {
+  const debug = env.DEBUG === 'TRUE'
   const sentry_data: SentryData = Object.assign(
     {
       platform: 'javascript',
@@ -75,10 +73,7 @@ async function _capture(request: Request, data: Partial<SentryData>): Promise<Re
 
   console.log('sentry data:', sentry_data)
 
-  // if (this.release) {
-  //   defaults.release = this.release
-  // }
-  const m = SENTRY_DSN.match(/^https:\/\/(.+?)@(.+?)\.ingest\.sentry\.io\/(.+)/)
+  const m = env.SENTRY_DSN.match(/^https:\/\/(.+?)@(.+?)\.ingest\.sentry\.io\/(.+)/)
   const [, sentry_key, , app] = m as RegExpMatchArray
 
   const params = {

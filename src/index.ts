@@ -2,31 +2,34 @@ import {captureException} from './sentry'
 import {HttpError} from './utils'
 import badge_svg from './badge'
 
-addEventListener('fetch', e => e.respondWith(handle(e)))
+export interface Env {
+  GITHUB_TOKEN: string
+  SENTRY_DSN: string
+  DEBUG?: string
+}
 
-async function handle(event: FetchEvent) {
-  const {request} = event
-
-  try {
-    return await route(event)
-  } catch (exc) {
-    if (exc instanceof HttpError) {
-      console.warn(exc.message)
-      return exc.response()
+export default {
+  async fetch(request: Request, env: Env, ctx: ExecutionContext): Promise<Response> {
+    try {
+      return await route(request, env)
+    } catch (exc) {
+      if (exc instanceof HttpError) {
+        console.warn(exc.message)
+        return exc.response()
+      }
+      console.error('error handling request:', request)
+      console.error('error:', exc)
+      captureException(request, ctx, env, exc as Error)
+      const body = `\nError occurred on the edge:\n\n${(exc as Error).message}\n${(exc as Error).stack}\n`
+      return new Response(body, {status: 500})
     }
-    console.error('error handling request:', request)
-    console.error('error:', exc)
-    captureException(event, exc)
-    const body = `\nError occurred on the edge:\n\n${exc.message}\n${exc.stack}\n`
-    return new Response(body, {status: 500})
-  }
+  },
 }
 
 const badge_regex = /^\/([^/]+)\/([^.]+)\.svg/
 const redirect_regex = /^\/redirect\/([^/]+)\/([^/]+)/
 
-async function route(event: FetchEvent) {
-  const {request} = event
+async function route(request: Request, env: Env) {
   const {pathname, searchParams} = new URL(request.url)
   if (pathname == '/favicon.ico') {
     return fetch('http://smokeshow.helpmanual.io/favicon.ico')
@@ -34,12 +37,12 @@ async function route(event: FetchEvent) {
 
   const m1 = pathname.match(badge_regex)
   if (m1) {
-    return await badge(m1[1], m1[2], searchParams)
+    return await badge(m1[1], m1[2], searchParams, env)
   }
 
   const m2 = pathname.match(redirect_regex)
   if (m2) {
-    return await redirect(m2[1], m2[2], searchParams)
+    return await redirect(m2[1], m2[2], searchParams, env)
   }
 
   if (pathname == '/') {
@@ -56,8 +59,8 @@ async function route(event: FetchEvent) {
   throw new HttpError(404, 'Page Not Found')
 }
 
-async function badge(owner: string, repo: string, searchParams: URLSearchParams): Promise<Response> {
-  const {status, statuses, match} = await status_info(owner, repo, searchParams)
+async function badge(owner: string, repo: string, searchParams: URLSearchParams, env: Env): Promise<Response> {
+  const {status, statuses, match} = await status_info(owner, repo, searchParams, env)
 
   let coverage = '??%'
   let message
@@ -84,8 +87,8 @@ async function badge(owner: string, repo: string, searchParams: URLSearchParams)
   return new Response(svg, {headers})
 }
 
-async function redirect(owner: string, repo: string, searchParams: URLSearchParams): Promise<Response> {
-  const {status, statuses, match} = await status_info(owner, repo, searchParams)
+async function redirect(owner: string, repo: string, searchParams: URLSearchParams, env: Env): Promise<Response> {
+  const {status, statuses, match} = await status_info(owner, repo, searchParams, env)
 
   if (!status) {
     const d = JSON.stringify(statuses.map(s => s.description))
@@ -111,21 +114,22 @@ interface Commit {
   url: string
 }
 
-async function status_info(owner: string, repo: string, searchParams: URLSearchParams): Promise<StatusInfo> {
+async function status_info(owner: string, repo: string, searchParams: URLSearchParams, env: Env): Promise<StatusInfo> {
   const match = RegExp(searchParams.get('match') || '^coverage', 'i')
 
-  let url = `https://api.github.com/repos/${owner}/${repo}/commits?per_page=5`
+  const newSearchParams = new URLSearchParams({per_page: '5'})
   const branch = searchParams.get('branch')
   if (branch) {
-    url += `&sha=${branch}`
+    newSearchParams.set('sha', branch)
   }
+  const url = `https://api.github.com/repos/${owner}/${repo}/commits?${newSearchParams.toString()}`
 
-  const commits: Commit[] = await get(url)
+  const commits: Commit[] = await get(url, env)
 
   let i = 0;
   for (const commit of commits) {
     i += 1
-    const data: {statuses: Status[]} = await get(`${commit.url}/status`)
+    const data: {statuses: Status[]} = await get(`${commit.url}/status`, env)
     if (data.statuses.length > 0) {
       console.log(`${i} commit ${commit.sha} has ${data.statuses.length} statuses, using commit`)
       return {
@@ -137,7 +141,6 @@ async function status_info(owner: string, repo: string, searchParams: URLSearchP
       console.log(`${i} commit ${commit.sha} has no statuses, continuing`)
     }
   }
-  // no commit found with statuses
   return {
     status: undefined,
     statuses: [],
@@ -145,8 +148,14 @@ async function status_info(owner: string, repo: string, searchParams: URLSearchP
   }
 }
 
-async function get(url: string): Promise<any> {
-  const r = await fetch(url, {headers: {'user-agent': 'https://github.com/samuelcolvin/coverage-badge'}})
+async function get(url: string, env: Env): Promise<any> {
+  const headers = {
+    'User-Agent': 'https://github.com/samuelcolvin/coverage-badge',
+    'Authorization': `Bearer ${env.GITHUB_TOKEN}`,
+    'Accept': 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2026-03-10'
+  }
+  const r = await fetch(url, {headers})
   if (r.status != 200) {
     const body = await r.text()
     throw new HttpError(502,`Unexpected response from "${url}" ${r.status} body:\n${body}`)

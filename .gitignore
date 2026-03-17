@@ -1,6 +1,6 @@
 dist/
 node_modules/
+.wrangler/
 /secrets.sh
-/worker/
 /.idea/
 /site/
