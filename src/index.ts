@@ -82,8 +82,7 @@ async function badge(owner: string, repo: string, searchParams: URLSearchParams,
   const svg = badge_svg.replaceAll('{cov}', coverage).replaceAll('{message}', message)
   const headers = {
     'content-type': 'image/svg+xml',
-    'cache-control': 'private, no-store',
-    'expires': new Date().toUTCString(),
+    'cache-control': 'public, max-age=120',
   }
   return new Response(svg, {headers})
 }
@@ -120,7 +119,7 @@ async function status_info(owner: string, repo: string, searchParams: URLSearchP
   const branch = searchParams.get('branch') || ''
 
   const cacheKey = `${owner}/${repo}/${branch}/${matchParam}`
-  const cached = await env.COVERAGE_CACHE.get(cacheKey, 'json') as StatusInfo | null
+  const cached = await env.COVERAGE_CACHE.get(cacheKey, {type: 'json', cacheTtl: 60}) as StatusInfo | null
   if (cached) {
     console.log(`cache hit for ${cacheKey}`)
     return cached
@@ -153,7 +152,7 @@ async function status_info(owner: string, repo: string, searchParams: URLSearchP
     }
   }
 
-  await env.COVERAGE_CACHE.put(cacheKey, JSON.stringify(result), {expirationTtl: 300})
+  await env.COVERAGE_CACHE.put(cacheKey, JSON.stringify(result), {expirationTtl: 120})
   return result
 }
 
