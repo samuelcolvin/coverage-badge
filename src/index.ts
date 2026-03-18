@@ -135,27 +135,26 @@ async function status_info(owner: string, repo: string, searchParams: URLSearchP
   const commits: Commit[] = await get(url, env)
 
   let i = 0;
+  let result: StatusInfo = { statuses: [], matchParam }
   for (const commit of commits) {
     i += 1
     const data: {statuses: Status[]} = await get(`${commit.url}/status`, env)
     if (data.statuses.length > 0) {
       console.log(`${i} commit ${commit.sha} has ${data.statuses.length} statuses, using commit`)
       const match = RegExp(matchParam, 'i')
-      const result: StatusInfo = {
+      result = {
         status: data.statuses.find(s => s.description.match(match)),
         statuses: data.statuses,
         matchParam
       }
-      await env.COVERAGE_CACHE.put(cacheKey, JSON.stringify(result), {expirationTtl: 300})
-      return result
+      break
     } else {
       console.log(`${i} commit ${commit.sha} has no statuses, continuing`)
     }
   }
-  return {
-    statuses: [],
-    matchParam
-  }
+
+  await env.COVERAGE_CACHE.put(cacheKey, JSON.stringify(result), {expirationTtl: 300})
+  return result
 }
 
 async function get(url: string, env: Env): Promise<any> {
